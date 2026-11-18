@@ -52,25 +52,45 @@ PRODUCTS = {
 TEXTS = {
     "uz": {
         "welcome": "Assalomu alaykum! 🕊 <b>Kolibri Water</b> suv yetkazib berish xizmatiga xush kelibsiz.\n🚚 <i>Yetkazib berish xizmati mavjud!</i>\n\nKerakli mahsulotni tanlang:",
+        "choose_more": "Yana qaysi mahsulotni savatchaga qo'shamiz?",
         "choose_btn": "Iltimos, pastdagi tugmalardan birini tanlang.",
         "ask_qty": "Nechta (nechta blok yoki dona) kerak?\nFaqat raqam yozing (masalan: 2):",
         "wrong_qty": "Iltimos, to'g'ri raqam kiriting (masalan: 3).",
-        "total_ask_phone": "💰 Mahsulotlar summasi: <b>{total:,} so'm</b>\n🚚 Yetkazib berish xizmati mavjud.\n\nBuyurtmani rasmiylashtirish uchun telefon raqamingizni yuboring:",
+        "added_to_cart": "✅ <b>Savatchaga qo'shildi!</b>\n\n🛒 <b>Sizning savatchangiz:</b>\n{cart_list}\n💰 <b>Jami summa: {total:,} so'm</b>\n\nYana mahsulot qo'shasizmi yoki buyurtmani rasmiylashtiramizmi?",
+        "btn_add_more": "➕ Yana mahsulot qo'shish",
+        "btn_checkout": "✅ Buyurtmani rasmiylashtirish",
+        "btn_clear": "🗑 Savatchani tozalash",
+        "cart_cleared": "🗑 Savatcha tozalandi! Qaytadan mahsulot tanlang:",
+        "empty_cart": "Savatchangiz bo'sh. Avval mahsulot tanlang:",
+        "ask_phone": "💰 Umumiy summa: <b>{total:,} so'm</b>\n🚚 Yetkazib berish xizmati mavjud.\n\nBuyurtmani tasdiqlash uchun telefon raqamingizni yuboring:",
         "phone_btn": "📞 Telefon raqamni yuborish",
         "ask_address": "Yetkazib berish manzilini yozing yoki lokatsiya yuboring:",
         "loc_btn": "📍 Lokatsiya yuborish",
-        "done": "✅ Buyurtmangiz qabul qilindi! Tez orada <b>Kolibri Water</b> menejeri siz bilan bog'lanadi.\n\nYana buyurtma berish uchun /start ni bosing."
+        "done": "✅ Buyurtmangiz qabul qilindi! Tez orada <b>Kolibri Water</b> menejeri siz bilan bog'lanadi.",
+        "btn_new_order": "🔄 Yana buyurtma berish",
+        "currency": "so'm",
+        "pcs": "ta"
     },
     "ru": {
         "welcome": "Здравствуйте! 🕊 Добро пожаловать в службу доставки воды <b>Kolibri Water</b>.\n🚚 <i>Имеется услуга доставки!</i>\n\nВыберите нужный товар:",
+        "choose_more": "Какой ещё товар добавим в корзину?",
         "choose_btn": "Пожалуйста, выберите одну из кнопок ниже.",
         "ask_qty": "Сколько (блоков или штук) вам нужно?\nВведите только цифру (например: 2):",
         "wrong_qty": "Пожалуйста, введите правильное число (например: 3).",
-        "total_ask_phone": "💰 Сумма товаров: <b>{total:,} сум</b>\n🚚 Имеется услуга доставки.\n\nОтправьте ваш номер телефона для оформления заказа:",
+        "added_to_cart": "✅ <b>Добавлено в корзину!</b>\n\n🛒 <b>Ваша корзина:</b>\n{cart_list}\n💰 <b>Итоговая сумма: {total:,} сум</b>\n\nДобавить ещё товар или оформить заказ?",
+        "btn_add_more": "➕ Добавить ещё товар",
+        "btn_checkout": "✅ Оформить заказ",
+        "btn_clear": "🗑 Очистить корзину",
+        "cart_cleared": "🗑 Корзина очищена! Выберите товар заново:",
+        "empty_cart": "Ваша корзина пуста. Сначала выберите товар:",
+        "ask_phone": "💰 Общая сумма: <b>{total:,} сум</b>\n🚚 Имеется услуга доставки.\n\nОтправьте ваш номер телефона для подтверждения заказа:",
         "phone_btn": "📞 Отправить номер телефона",
         "ask_address": "Напишите адрес доставки или отправьте локацию:",
         "loc_btn": "📍 Отправить локацию",
-        "done": "✅ Ваш заказ принят! В ближайшее время менеджер <b>Kolibri Water</b> свяжется с вами.\n\nЧтобы сделать новый заказ, нажмите /start."
+        "done": "✅ Ваш заказ принят! В ближайшее время менеджер <b>Kolibri Water</b> свяжется с вами.",
+        "btn_new_order": "🔄 Сделать новый заказ",
+        "currency": "сум",
+        "pcs": "шт"
     }
 }
 
@@ -78,6 +98,7 @@ class OrderState(StatesGroup):
     choosing_lang = State()
     choosing_product = State()
     entering_quantity = State()
+    cart_menu = State()
     entering_phone = State()
     entering_address = State()
 
@@ -87,10 +108,36 @@ def get_lang_keyboard():
         resize_keyboard=True
     )
 
-def get_products_keyboard(lang: str):
-    buttons = [[KeyboardButton(text=name)] for name in PRODUCTS[lang].keys()]
+def get_products_keyboard(lang: str, has_cart: bool = False):
+    buttons = []
+    if has_cart:
+        buttons.append([KeyboardButton(text=TEXTS[lang]["btn_checkout"])])
+    for name in PRODUCTS[lang].keys():
+        buttons.append([KeyboardButton(text=name)])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+def get_cart_keyboard(lang: str):
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=TEXTS[lang]["btn_checkout"])],
+            [KeyboardButton(text=TEXTS[lang]["btn_add_more"]), KeyboardButton(text=TEXTS[lang]["btn_clear"])]
+        ],
+        resize_keyboard=True
+    )
+
+def format_cart(cart: list, lang: str):
+    lines = []
+    total = 0
+    curr = TEXTS[lang]["currency"]
+    pcs = TEXTS[lang]["pcs"]
+    for i, item in enumerate(cart, 1):
+        subtotal = item["qty"] * item["price"]
+        total += subtotal
+        lines.append(f"{i}. {item['name']} — {item['qty']} {pcs} = <b>{subtotal:,} {curr}</b>")
+    return "\n".join(lines), total
+
+# "Yana buyurtma berish" tugmasini ham /start kabi qabul qilish
+@dp.message(lambda msg: msg.text in ["🔄 Yana buyurtma berish", "🔄 Сделать новый заказ"])
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
@@ -110,11 +157,11 @@ async def process_lang(message: types.Message, state: FSMContext):
         await message.answer("Iltimos, tilni tanlang / Пожалуйста, выберите язык:")
         return
 
-    await state.update_data(lang=lang)
+    await state.update_data(lang=lang, cart=[])
     await message.answer(
         TEXTS[lang]["welcome"],
         parse_mode="HTML",
-        reply_markup=get_products_keyboard(lang)
+        reply_markup=get_products_keyboard(lang, has_cart=False)
     )
     await state.set_state(OrderState.choosing_product)
 
@@ -122,12 +169,31 @@ async def process_lang(message: types.Message, state: FSMContext):
 async def process_product(message: types.Message, state: FSMContext):
     data = await state.get_data()
     lang = data["lang"]
+    cart = data.get("cart", [])
+
+    # Agar savatchada narsa bo'lsa va mijoz to'g'ridan-to'g'ri rasmiylashtirishni bossa
+    if message.text == TEXTS[lang]["btn_checkout"]:
+        if not cart:
+            await message.answer(TEXTS[lang]["empty_cart"])
+            return
+        _, total = format_cart(cart, lang)
+        phone_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=TEXTS[lang]["phone_btn"], request_contact=True)]],
+            resize_keyboard=True
+        )
+        await message.answer(
+            TEXTS[lang]["ask_phone"].format(total=total),
+            parse_mode="HTML",
+            reply_markup=phone_kb
+        )
+        await state.set_state(OrderState.entering_phone)
+        return
 
     if message.text not in PRODUCTS[lang]:
         await message.answer(TEXTS[lang]["choose_btn"])
         return
     
-    await state.update_data(product=message.text, price=PRODUCTS[lang][message.text])
+    await state.update_data(current_product=message.text, current_price=PRODUCTS[lang][message.text])
     await message.answer(
         TEXTS[lang]["ask_qty"],
         reply_markup=ReplyKeyboardRemove()
@@ -144,90 +210,19 @@ async def process_quantity(message: types.Message, state: FSMContext):
         return
 
     qty = int(message.text)
-    total_price = qty * data["price"]
-    await state.update_data(quantity=qty, total_price=total_price)
+    cart = data.get("cart", [])
     
-    phone_kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=TEXTS[lang]["phone_btn"], request_contact=True)]],
-        resize_keyboard=True
-    )
-    
-    await message.answer(
-        TEXTS[lang]["total_ask_phone"].format(total=total_price),
-        parse_mode="HTML",
-        reply_markup=phone_kb
-    )
-    await state.set_state(OrderState.entering_phone)
+    # Agar bu mahsulot oldin savatchada bo'lsa, sonini qo'shamiz
+    found = False
+    for item in cart:
+        if item["name"] == data["current_product"]:
+            item["qty"] += qty
+            found = True
+            break
+    if not found:
+        cart.append({
+            "name": data["current_product"],
+            "price": data["current_price"],
+            "qty": qty
+        })
 
-@dp.message(OrderState.entering_phone)
-async def process_phone(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    lang = data["lang"]
-    phone = message.contact.phone_number if message.contact else message.text
-    await state.update_data(phone=phone)
-    
-    location_kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=TEXTS[lang]["loc_btn"], request_location=True)]],
-        resize_keyboard=True
-    )
-    
-    await message.answer(
-        TEXTS[lang]["ask_address"],
-        reply_markup=location_kb
-    )
-    await state.set_state(OrderState.entering_address)
-
-@dp.message(OrderState.entering_address)
-async def process_address(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    lang = data["lang"]
-    user = message.from_user
-    lang_label = "O'zbekcha" if lang == "uz" else "Русский"
-    
-    manager_text = (
-        f"🚨 <b>YANGI BUYURTMA ({lang_label})!</b>\n\n"
-        f"👤 Mijoz: {user.full_name} (@{user.username or 'yo‘q'})\n"
-        f"📞 Telefon: {data['phone']}\n"
-        f"💧 Mahsulot: {data['product']}\n"
-        f"🔢 Soni: {data['quantity']} ta\n"
-        f"💵 Mahsulot summasi: <b>{data['total_price']:,} so'm</b>\n"
-    )
-
-    try:
-        if message.location:
-            manager_text += "📍 Manzil: Quyidagi lokatsiyada 👇"
-            await bot.send_message(MANAGER_ID, manager_text, parse_mode="HTML")
-            await bot.send_location(MANAGER_ID, message.location.latitude, message.location.longitude)
-        else:
-            manager_text += f"📍 Manzil: {message.text}"
-            await bot.send_message(MANAGER_ID, manager_text, parse_mode="HTML")
-    except Exception as e:
-        logging.error(f"Menejerga yuborishda xato: {e}")
-
-    await message.answer(
-        TEXTS[lang]["done"],
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    await state.clear()
-
-# Render serveri uchun kichik veb-sahifa
-async def handle(request):
-    return web.Response(text="Kolibri Water Bot ishlamoqda!")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 10000))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-
-async def main():
-    logging.basicConfig(level=logging.INFO)
-    await start_web_server()
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
