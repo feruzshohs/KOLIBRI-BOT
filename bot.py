@@ -136,15 +136,11 @@ def format_cart(cart: list, lang: str):
         lines.append(f"{i}. {item['name']} — {item['qty']} {pcs} = <b>{subtotal:,} {curr}</b>")
     return "\n".join(lines), total
 
-# "Yana buyurtma berish" tugmasini ham /start kabi qabul qilish
 @dp.message(lambda msg: msg.text in ["🔄 Yana buyurtma berish", "🔄 Сделать новый заказ"])
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        "Tilni tanlang / Выберите язык:",
-        reply_markup=get_lang_keyboard()
-    )
+    await message.answer("Tilni tanlang / Выберите язык:", reply_markup=get_lang_keyboard())
     await state.set_state(OrderState.choosing_lang)
 
 @dp.message(OrderState.choosing_lang)
@@ -156,13 +152,8 @@ async def process_lang(message: types.Message, state: FSMContext):
     else:
         await message.answer("Iltimos, tilni tanlang / Пожалуйста, выберите язык:")
         return
-
     await state.update_data(lang=lang, cart=[])
-    await message.answer(
-        TEXTS[lang]["welcome"],
-        parse_mode="HTML",
-        reply_markup=get_products_keyboard(lang, has_cart=False)
-    )
+    await message.answer(TEXTS[lang]["welcome"], parse_mode="HTML", reply_markup=get_products_keyboard(lang, False))
     await state.set_state(OrderState.choosing_product)
 
 @dp.message(OrderState.choosing_product)
@@ -171,21 +162,13 @@ async def process_product(message: types.Message, state: FSMContext):
     lang = data["lang"]
     cart = data.get("cart", [])
 
-    # Agar savatchada narsa bo'lsa va mijoz to'g'ridan-to'g'ri rasmiylashtirishni bossa
     if message.text == TEXTS[lang]["btn_checkout"]:
         if not cart:
             await message.answer(TEXTS[lang]["empty_cart"])
             return
         _, total = format_cart(cart, lang)
-        phone_kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text=TEXTS[lang]["phone_btn"], request_contact=True)]],
-            resize_keyboard=True
-        )
-        await message.answer(
-            TEXTS[lang]["ask_phone"].format(total=total),
-            parse_mode="HTML",
-            reply_markup=phone_kb
-        )
+        phone_kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=TEXTS[lang]["phone_btn"], request_contact=True)]], resize_keyboard=True)
+        await message.answer(TEXTS[lang]["ask_phone"].format(total=total), parse_mode="HTML", reply_markup=phone_kb)
         await state.set_state(OrderState.entering_phone)
         return
 
@@ -194,10 +177,7 @@ async def process_product(message: types.Message, state: FSMContext):
         return
     
     await state.update_data(current_product=message.text, current_price=PRODUCTS[lang][message.text])
-    await message.answer(
-        TEXTS[lang]["ask_qty"],
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await message.answer(TEXTS[lang]["ask_qty"], reply_markup=ReplyKeyboardRemove())
     await state.set_state(OrderState.entering_quantity)
 
 @dp.message(OrderState.entering_quantity)
@@ -211,8 +191,6 @@ async def process_quantity(message: types.Message, state: FSMContext):
 
     qty = int(message.text)
     cart = data.get("cart", [])
-    
-    # Agar bu mahsulot oldin savatchada bo'lsa, sonini qo'shamiz
     found = False
     for item in cart:
         if item["name"] == data["current_product"]:
@@ -220,9 +198,20 @@ async def process_quantity(message: types.Message, state: FSMContext):
             found = True
             break
     if not found:
-        cart.append({
-            "name": data["current_product"],
-            "price": data["current_price"],
-            "qty": qty
-        })
+        cart.append({"name": data["current_product"], "price": data["current_price"], "qty": qty})
+
+    await state.update_data(cart=cart)
+    cart_list, total = format_cart(cart, lang)
+    await message.answer(TEXTS[lang]["added_to_cart"].format(cart_list=cart_list, total=total), parse_mode="HTML", reply_markup=get_cart_keyboard(lang))
+    await state.set_state(OrderState.cart_menu)
+
+@dp.message(OrderState.cart_menu)
+async def process_cart_menu(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    lang = data["lang"]
+    cart = data.get("cart", [])
+
+
+
+
 
